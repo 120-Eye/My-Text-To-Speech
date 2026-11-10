@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UtiloKit Advanced TTS Reader & Conversation Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome for gorgeous icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .light .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        textarea::-webkit-scrollbar { width: 8px; }
+        textarea::-webkit-scrollbar-track { background: transparent; }
+        textarea::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col transition-colors duration-300">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-waveform text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-indigo-200 to-indigo-400 bg-clip-text text-transparent">Heerak TTS</h1>
+                    <p class="text-xs text-slate-400">Unlimited Speech Synthesizer &amp; Audio Export</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700" title="Toggle Theme">
+                    <i id="themeIcon" class="fa-solid fa-sun text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:px-6 lg:px-8 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left Panel: Text Input & Editor Area (7 cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-4">
+            <div class="glass-panel rounded-2xl p-5 flex flex-col flex-1 shadow-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between mb-3">
+                    <label for="textInput" class="text-sm font-semibold text-slate-300 flex items-center gap-2">
+                        <i class="fa-regular fa-file-lines text-indigo-400"></i> Document / Script Content (Up to 3,000 words)
+                    </label>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="loadSampleText()" class="px-2.5 py-1 text-xs font-medium bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Load Dialogue Script
+                        </button>
+                        <button onclick="clearText()" class="p-1.5 text-slate-400 hover:text-red-400 rounded-lg transition-all" title="Clear Text">
+                            <i class="fa-solid fa-trash-can text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Textarea -->
+                <div class="relative flex-1 min-h-[380px] flex flex-col">
+                    <textarea id="textInput" 
+                        class="w-full flex-1 bg-slate-900/60 text-slate-100 placeholder-slate-500 p-4 rounded-xl border border-slate-700/60 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm sm:text-base leading-relaxed resize-y font-normal"
+                        placeholder="Type or paste your text here. Use [m], [m:], [f], or [f:] to switch between male and female voices in conversation mode..."></textarea>
+                </div>
+
+                <!-- Live Metrics Footer -->
+                <div class="flex flex-wrap items-center justify-between pt-3 mt-3 border-t border-slate-800/80 text-xs text-slate-400 gap-2">
+                    <div class="flex items-center space-x-4">
+                        <span><strong id="wordCount" class="text-indigo-400">0</strong> words</span>
+                        <span>•</span>
+                        <span><strong id="charCount" class="text-slate-300">0</strong> chars</span>
+                        <span>•</span>
+                        <span>Est. reading: <strong id="readTime" class="text-slate-300">0 min</strong></span>
+                    </div>
+                    <div class="flex items-center space-x-1 text-emerald-400">
+                        <i class="fa-solid fa-circle-check"></i> Ready
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Voice Control & Configuration (5 cols) -->
+        <section class="lg:col-span-5 flex flex-col space-y-4">
+            
+            <!-- Voice Config Card -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl space-y-4">
+                <h2 class="text-sm font-semibold text-slate-300 flex items-center gap-2 border-b border-slate-800 pb-3">
+                    <i class="fa-solid fa-sliders text-indigo-400"></i> Voice &amp; Audio Configuration
+                </h2>
+
+                <!-- Conversation Mode Toggle -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between">
+                    <div>
+                        <span class="text-sm font-medium text-slate-200 block">Conversation Mode</span>
+                        <span class="text-xs text-slate-400">Switch on <code class="text-indigo-400">[m]</code>, <code class="text-indigo-400">[m:]</code> &amp; <code class="text-pink-400">[f]</code>, <code class="text-pink-400">[f:]</code></span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="convoModeToggle" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+
+                <!-- Standard Male Voice Select -->
+                <div class="space-y-1.5">
+                    <label for="maleVoiceSelect" class="text-xs font-semibold text-slate-400 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-mars text-blue-400"></i> Male Voice (`[m]` / `[m:]`)</span>
+                        <button onclick="previewVoice('male')" class="text-indigo-400 hover:text-indigo-300 text-[11px] underline">Test</button>
+                    </label>
+                    <select id="maleVoiceSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
+
+                <!-- Standard Female Voice Select -->
+                <div class="space-y-1.5">
+                    <label for="femaleVoiceSelect" class="text-xs font-semibold text-slate-400 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-venus text-pink-400"></i> Female Voice (`[f]` / `[f:]`)</span>
+                        <button onclick="previewVoice('female')" class="text-indigo-400 hover:text-indigo-300 text-[11px] underline">Test</button>
+                    </label>
+                    <select id="femaleVoiceSelect" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="">Loading voices...</option>
+                    </select>
+                </div>
+
+                <!-- Sliders: Rate & Pitch -->
+                <div class="grid grid-cols-2 gap-4 pt-1">
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs text-slate-400 font-medium">
+                            <span>Speed</span>
+                            <span id="rateVal" class="text-indigo-400">1.0x</span>
+                        </div>
+                        <input type="range" id="rateRange" min="0.5" max="2" step="0.1" value="1" 
+                            class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer" oninput="updateRateLabel()">
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between text-xs text-slate-400 font-medium">
+                            <span>Pitch</span>
+                            <span id="pitchVal" class="text-indigo-400">1.0</span>
+                        </div>
+                        <input type="range" id="pitchRange" min="0.5" max="1.5" step="0.1" value="1" 
+                            class="w-full accent-indigo-500 bg-slate-800 rounded-lg h-2 cursor-pointer" oninput="updatePitchLabel()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Playback Control Center -->
+            <div class="glass-panel rounded-2xl p-5 shadow-xl flex flex-col space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Playback &amp; Export Studio</span>
+                    <span id="playbackStatus" class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700">Idle</span>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-[11px] text-slate-500">
+                        <span id="progressCurrent">0%</span>
+                        <span id="progressTotal">Complete</span>
+                    </div>
+                    <!-- Interactive Timeline / Progress Slider -->
+                    <div id="timelineContainer" class="w-full bg-slate-800 rounded-full h-3 overflow-hidden cursor-pointer relative group" onclick="seekTimeline(event)" title="Click or drag to jump to position">
+                        <div id="progressBar" class="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 w-0 transition-all duration-75 pointer-events-none"></div>
+                        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 bg-white/10 transition-opacity pointer-events-none"></div>
+                    </div>
+                </div>
+
+                <!-- Main Action Buttons -->
+                <div class="grid grid-cols-4 gap-2 pt-1">
+                    <button id="playBtn" onclick="startSpeech()" class="col-span-2 py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-medium rounded-xl shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all transform active:scale-95">
+                        <i class="fa-solid fa-play"></i> Play
+                    </button>
+                    <button id="pauseBtn" onclick="pauseSpeech()" class="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium rounded-xl border border-slate-700 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled title="Pause / Resume">
+                        <i class="fa-solid fa-pause" id="pauseIcon"></i>
+                    </button>
+                    <button id="stopBtn" onclick="stopSpeech()" class="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-red-400 font-medium rounded-xl border border-slate-700 flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed" disabled title="Stop">
+                        <i class="fa-solid fa-stop"></i>
+                    </button>
+                </div>
+
+                <!-- Download Audio Button & Format Select -->
+                <div class="flex items-center gap-2 pt-1">
+                    <select id="audioFormatSelect" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-3 text-xs text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="mp4">.mp4 / .m4a</option>
+                        <option value="webm">.webm</option>
+                    </select>
+                    <button id="downloadBtn" onclick="downloadAudioFile()" class="flex-1 py-3 px-4 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-indigo-200 font-medium rounded-xl border border-indigo-500/30 shadow-md flex items-center justify-center gap-2 transition-all">
+                        <i class="fa-solid fa-download"></i> Download Audio File
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Engine Info Panel -->
+            <div class="glass-panel rounded-xl p-4 text-xs text-slate-400 space-y-2 border border-slate-800">
+                <div class="flex items-center gap-2 font-semibold text-slate-300">
+                    <i class="fa-solid fa-circle-info text-indigo-400"></i> Why do some voices only work online?
+                </div>
+                <p class="leading-relaxed">
+                    Speech synthesis engines fall into two categories: <strong>Local Offline</strong> (synthesized on your device processor using built-in OS packages) and <strong>Cloud Neural Online</strong> (processed on server neural networks for superior natural cadence). Online voices require an active internet connection because the audio stream is streamed dynamically from cloud TTS providers.
+                </p>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Custom Modal for Notifications / Alerts -->
+    <div id="appModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl text-center space-y-4">
+            <div id="modalIcon" class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-xl">
+                <i class="fa-solid fa-info"></i>
+            </div>
+            <h3 id="modalTitle" class="text-lg font-bold text-slate-100">Notice</h3>
+            <p id="modalMessage" class="text-sm text-slate-300">Message content here.</p>
+            <button onclick="closeModal()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-xl shadow transition-all">OK</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500">
+        <p>Heerak TTS Web Application • Built with Web Speech API &amp; MediaStream Audio Capture</p>
+    </footer>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let synth = window.speechSynthesis;
+        let voices = [];
+        let maleSelect = document.getElementById('maleVoiceSelect');
+        let femaleSelect = document.getElementById('femaleVoiceSelect');
+        let textInput = document.getElementById('textInput');
+        
+        let playbackStatus = document.getElementById('playbackStatus');
+        let playBtn = document.getElementById('playBtn');
+        let pauseBtn = document.getElementById('pauseBtn');
+        let stopBtn = document.getElementById('stopBtn');
+        let downloadBtn = document.getElementById('downloadBtn');
+        let progressBar = document.getElementById('progressBar');
+        let progressCurrent = document.getElementById('progressCurrent');
+        let pauseIcon = document.getElementById('pauseIcon');
+
+        // Playback Queue State Engine
+        let speechQueue = [];
+        let currentQueueIndex = 0;
+        let isPlaying = false;
+        let isPaused = false;
+        let totalUtteranceCharacters = 0;
+        let spokenCharactersCount = 0;
+        let currentUtterance = null;
+        let currentFullText = "";
+
+        // Custom Modal helper (replacing alert())
+        function showModal(title, message, isError = false) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalMessage').textContent = message;
+            let iconDiv = document.getElementById('modalIcon');
+            if (isError) {
+                iconDiv.className = "w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center mx-auto text-xl";
+                iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                iconDiv.className = "w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-xl";
+                iconDiv.innerHTML = '<i class="fa-solid fa-info"></i>';
+            }
+            document.getElementById('appModal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('appModal').classList.add('hidden');
+        }
+
+        // Load Voices
+        function loadVoices() {
+            voices = synth.getVoices();
+            maleSelect.innerHTML = '';
+            femaleSelect.innerHTML = '';
+
+            let englishVoices = voices.filter(v => v.lang.startsWith('en'));
+            if (englishVoices.length === 0) englishVoices = voices;
+
+            let maleFound = false;
+            let femaleFound = false;
+
+            englishVoices.forEach((voice) => {
+                let option = document.createElement('option');
+                option.value = voices.indexOf(voice);
+                option.textContent = `${voice.name} (${voice.lang})`;
+                
+                let nameLower = voice.name.toLowerCase();
+                let isMale = nameLower.includes('male') || nameLower.includes('david') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('mark');
+                let isFemale = nameLower.includes('female') || nameLower.includes('zira') || nameLower.includes('hazel') || nameLower.includes('susan') || nameLower.includes('karen') || nameLower.includes('victoria') || nameLower.includes('aria') || nameLower.includes('jenny');
+
+                if (isMale && !maleFound) {
+                    maleSelect.appendChild(option);
+                    maleSelect.value = voices.indexOf(voice);
+                    maleFound = true;
+                } else if (isFemale && !femaleFound) {
+                    femaleSelect.appendChild(option);
+                    femaleSelect.value = voices.indexOf(voice);
+                    femaleFound = true;
+                } else {
+                    maleSelect.appendChild(option.cloneNode(true));
+                    femaleSelect.appendChild(option);
+                }
+            });
+
+            if (maleSelect.options.length > 0 && maleSelect.value === "") maleSelect.selectedIndex = 0;
+            if (femaleSelect.options.length > 0 && femaleSelect.value === "") {
+                femaleSelect.selectedIndex = femaleSelect.options.length > 1 ? 1 : 0;
+            }
+        }
+
+        if (synth.onvoiceschanged !== undefined) {
+            synth.onvoiceschanged = loadVoices;
+        }
+        setTimeout(loadVoices, 100);
+
+        // Stats Updater
+        function updateStats() {
+            let text = textInput.value.trim();
+            let words = text === '' ? 0 : text.split(/\s+/).length;
+            let chars = text.length;
+            let readMinutes = Math.ceil(words / 200);
+
+            document.getElementById('wordCount').textContent = words.toLocaleString();
+            document.getElementById('charCount').textContent = chars.toLocaleString();
+            document.getElementById('readTime').textContent = `${readMinutes} min`;
+        }
+        textInput.addEventListener('input', updateStats);
+
+        // Load Sample Script with conversation tokens
+        function loadSampleText() {
+            const sampleScript = 
+`[m:] Hello there! Welcome to Heerak TTS Studio. How are you experiencing the conversation mode today?
+[f:] Hi! I'm doing fantastic. The automatic voice token switching feature makes building dialogues so smooth.
+[m:] Exactly! By simply placing [m:], [m], [f:], or [f] before lines, the system seamlessly routes speech between male and female system voices.
+[f:] That is brilliant for generating rich audio scripts, educational dialogues, or narrative stories without manual interruption.
+[m:] Absolutely. You can paste up to 3,000 words right here, adjust speech speed, and even download your audio file instantly!`;
+            textInput.value = sampleScript;
+            updateStats();
+        }
+
+        function clearText() {
+            if (synth.speaking || synth.paused) synth.cancel();
+            textInput.value = '';
+            updateStats();
+            resetPlaybackUI();
+        }
+
+        function updateRateLabel() {
+            document.getElementById('rateVal').textContent = document.getElementById('rateRange').value + 'x';
+        }
+        function updatePitchLabel() {
+            document.getElementById('pitchVal').textContent = document.getElementById('pitchRange').value;
+        }
+
+        function previewVoice(type) {
+            if (synth.speaking) synth.cancel();
+            let selectElem = type === 'male' ? maleSelect : femaleSelect;
+            let voiceIndex = selectElem.value;
+            if (voiceIndex === "" || voices.length === 0) return;
+
+            let testUtterance = new SpeechSynthesisUtterance(type === 'male' ? "Hello, this is the selected male voice preview." : "Hello, this is the selected female voice preview.");
+            testUtterance.voice = voices[voiceIndex];
+            testUtterance.rate = parseFloat(document.getElementById('rateRange').value);
+            testUtterance.pitch = parseFloat(document.getElementById('pitchRange').value);
+            synth.speak(testUtterance);
+        }
+
+        function parseScriptIntoChunks(text, convoEnabled) {
+            let segments = [];
+            
+            if (!convoEnabled) {
+                let chunks = splitTextIntoChunks(text, 350);
+                chunks.forEach(c => segments.push({ voiceType: 'male', text: c }));
+                return segments;
+            }
+
+            let regex = /(\[m:?\]|\[f:?\])/gi;
+            let parts = text.split(regex);
+            let currentVoiceType = 'male';
+
+            for (let i = 0; i < parts.length; i++) {
+                let part = parts[i];
+                if (!part) continue;
+
+                let trimmed = part.trim().toLowerCase();
+                if (trimmed === '[m]' || trimmed === '[m:]') {
+                    currentVoiceType = 'male';
+                } else if (trimmed === '[f]' || trimmed === '[f:]') {
+                    currentVoiceType = 'female';
+                } else {
+                    let subChunks = splitTextIntoChunks(part.trim(), 350);
+                    subChunks.forEach(sub => {
+                        if (sub.length > 0) {
+                            segments.push({
+                                voiceType: currentVoiceType,
+                                text: sub
+                            });
+                        }
+                    });
+                }
+            }
+
+            if (segments.length === 0 && text.trim().length > 0) {
+                segments.push({ voiceType: 'male', text: text.trim() });
+            }
+
+            return segments;
+        }
+
+        function splitTextIntoChunks(str, maxLength) {
+            if (str.length <= maxLength) return [str];
+            let chunks = [];
+            let sentences = str.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) || [str];
+            let currentChunk = "";
+
+            sentences.forEach(sentence => {
+                if ((currentChunk + sentence).length <= maxLength) {
+                    currentChunk += sentence;
+                } else {
+                    if (currentChunk) chunks.push(currentChunk.trim());
+                    if (sentence.length > maxLength) {
+                        let words = sentence.split(' ');
+                        let temp = '';
+                        words.forEach(w => {
+                            if ((temp + ' ' + w).length <= maxLength) {
+                                temp += (temp ? ' ' : '') + w;
+                            } else {
+                                chunks.push(temp);
+                                temp = w;
+                            }
+                        });
+                        currentChunk = temp;
+                    } else {
+                        currentChunk = sentence;
+                    }
+                }
+            });
+            if (currentChunk.trim()) chunks.push(currentChunk.trim());
+            return chunks;
+        }
+
+        function startSpeech() {
+            let text = textInput.value.trim();
+            if (!text) {
+                showModal("Empty Content", "Please enter or load some text to read.", true);
+                return;
+            }
+
+            if (synth.speaking || synth.paused) {
+                synth.cancel();
+            }
+
+            currentFullText = text;
+            let convoEnabled = document.getElementById('convoModeToggle').checked;
+            speechQueue = parseScriptIntoChunks(text, convoEnabled);
+
+            if (speechQueue.length === 0) return;
+
+            currentQueueIndex = 0;
+            totalUtteranceCharacters = text.length;
+            spokenCharactersCount = 0;
+            isPlaying = true;
+            isPaused = false;
+
+            playbackStatus.textContent = 'Playing';
+            playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 animate-pulse';
+            
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+            stopBtn.disabled = false;
+            pauseIcon.className = "fa-solid fa-pause";
+
+            playNextQueueSegment();
+        }
+
+        function seekTimeline(event) {
+            if (!isPlaying && speechQueue.length === 0) return;
+            
+            const timelineContainer = document.getElementById('timelineContainer');
+            const rect = timelineContainer.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const width = rect.width;
+            const percentage = Math.max(0, Math.min(1, clickX / width));
+            
+            const targetCharIndex = Math.floor(percentage * totalUtteranceCharacters);
+            
+            if (synth.speaking || synth.paused) {
+                synth.cancel();
+            }
+
+            let accumulatedChars = 0;
+            let targetQueueIndex = 0;
+            let charOffsetWithinChunk = 0;
+
+            for (let i = 0; i < speechQueue.length; i++) {
+                let chunkLen = speechQueue[i].text.length + 1;
+                if (accumulatedChars + chunkLen >= targetCharIndex) {
+                    targetQueueIndex = i;
+                    charOffsetWithinChunk = Math.max(0, targetCharIndex - accumulatedChars);
+                    break;
+                }
+                accumulatedChars += chunkLen;
+                targetQueueIndex = i;
+            }
+
+            currentQueueIndex = targetQueueIndex;
+            spokenCharactersCount = accumulatedChars;
+
+            if (speechQueue[currentQueueIndex]) {
+                if (charOffsetWithinChunk > 0 && charOffsetWithinChunk < speechQueue[currentQueueIndex].text.length) {
+                    speechQueue[currentQueueIndex].text = speechQueue[currentQueueIndex].text.substring(charOffsetWithinChunk);
+                }
+            }
+
+            isPlaying = true;
+            isPaused = false;
+            playbackStatus.textContent = 'Playing';
+            playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 animate-pulse';
+            playBtn.disabled = true;
+            pauseBtn.disabled = false;
+            stopBtn.disabled = false;
+
+            progressBar.style.width = (percentage * 100) + '%';
+            progressCurrent.textContent = Math.floor(percentage * 100) + '%';
+
+            playNextQueueSegment();
+        }
+
+        function playNextQueueSegment() {
+            if (!isPlaying) return;
+
+            if (currentQueueIndex >= speechQueue.length) {
+                resetPlaybackUI();
+                playbackStatus.textContent = 'Finished';
+                playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                progressBar.style.width = '100%';
+                progressCurrent.textContent = '100%';
+                return;
+            }
+
+            let segment = speechQueue[currentQueueIndex];
+            currentUtterance = new SpeechSynthesisUtterance(segment.text);
+
+            let selectElem = segment.voiceType === 'female' ? femaleSelect : maleSelect;
+            let voiceIdx = selectElem.value;
+            if (voiceIdx !== "" && voices[voiceIdx]) {
+                currentUtterance.voice = voices[voiceIdx];
+            }
+
+            currentUtterance.rate = parseFloat(document.getElementById('rateRange').value);
+            currentUtterance.pitch = parseFloat(document.getElementById('pitchRange').value);
+
+            let segmentLen = segment.text.length;
+
+            currentUtterance.onboundary = (e) => {
+                if (e.charIndex !== undefined) {
+                    let totalSpoken = spokenCharactersCount + e.charIndex;
+                    let pct = Math.min(100, Math.floor((totalSpoken / totalUtteranceCharacters) * 100));
+                    progressBar.style.width = pct + '%';
+                    progressCurrent.textContent = pct + '%';
+                }
+            };
+
+            currentUtterance.onend = () => {
+                spokenCharactersCount += segmentLen + 1;
+                currentQueueIndex++;
+                playNextQueueSegment();
+            };
+
+            currentUtterance.onerror = (e) => {
+                console.warn("Speech synthesis chunk error:", e);
+                currentQueueIndex++;
+                playNextQueueSegment();
+            };
+
+            synth.speak(currentUtterance);
+        }
+
+        function pauseSpeech() {
+            if (!isPlaying) return;
+
+            if (!isPaused) {
+                synth.pause();
+                isPaused = true;
+                playbackStatus.textContent = 'Paused';
+                playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30';
+                pauseIcon.className = "fa-solid fa-play";
+            } else {
+                synth.resume();
+                isPaused = false;
+                playbackStatus.textContent = 'Playing';
+                playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 animate-pulse';
+                pauseIcon.className = "fa-solid fa-pause";
+            }
+        }
+
+        function stopSpeech() {
+            if (synth.speaking || synth.paused) {
+                synth.cancel();
+            }
+            resetPlaybackUI();
+        }
+
+        function resetPlaybackUI() {
+            isPlaying = false;
+            isPaused = false;
+            playbackStatus.textContent = 'Idle';
+            playbackStatus.className = 'px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-800 text-slate-400 border border-slate-700';
+            playBtn.disabled = false;
+            pauseBtn.disabled = true;
+            stopBtn.disabled = true;
+            pauseIcon.className = "fa-solid fa-pause";
+            progressBar.style.width = '0%';
+            progressCurrent.textContent = '0%';
+        }
+
+        async function downloadAudioFile() {
+            let text = textInput.value.trim();
+            if (!text) {
+                showModal("Empty Content", "Please enter or load some text before exporting audio.", true);
+                return;
+            }
+
+            if (synth.speaking || synth.paused) synth.cancel();
+
+            let formatChoice = document.getElementById('audioFormatSelect').value;
+            showModal("Generating Audio", "Synthesizing and recording audio stream into file. Please wait a moment...");
+
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContextClass();
+                const dest = audioCtx.createMediaStreamDestination();
+
+                let mimeType = 'audio/webm';
+                let fileExtension = 'webm';
+                if (formatChoice === 'mp4') {
+                    if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                        mimeType = 'audio/mp4';
+                        fileExtension = 'mp4';
+                    } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+                        mimeType = 'audio/aac';
+                        fileExtension = 'm4a';
+                    } else {
+                        mimeType = 'audio/webm';
+                        fileExtension = 'm4a';
+                    }
+                }
+
+                const mediaRecorder = new MediaRecorder(dest.stream, { mimeType: mimeType });
+                let chunks = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(chunks, { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `heerak-tts-${Date.now()}.${fileExtension}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }, 100);
+                    closeModal();
+                };
+
+                mediaRecorder.start();
+
+                let convoEnabled = document.getElementById('convoModeToggle').checked;
+                let queue = parseScriptIntoChunks(text, convoEnabled);
+                let qIndex = 0;
+
+                function recordNextChunk() {
+                    if (qIndex >= queue.length) {
+                        setTimeout(() => {
+                            if (mediaRecorder.state !== 'inactive') {
+                                mediaRecorder.stop();
+                            }
+                            if (audioCtx.state !== 'closed') {
+                                audioCtx.close();
+                            }
+                        }, 500);
+                        return;
+                    }
+
+                    let seg = queue[qIndex];
+                    let utt = new SpeechSynthesisUtterance(seg.text);
+                    let sel = seg.voiceType === 'female' ? femaleSelect : maleSelect;
+                    let vIdx = sel.value;
+                    if (vIdx !== "" && voices[vIdx]) utt.voice = voices[vIdx];
+                    utt.rate = parseFloat(document.getElementById('rateRange').value);
+                    utt.pitch = parseFloat(document.getElementById('pitchRange').value);
+
+                    utt.onend = () => {
+                        qIndex++;
+                        recordNextChunk();
+                    };
+                    utt.onerror = () => {
+                        qIndex++;
+                        recordNextChunk();
+                    };
+
+                    synth.speak(utt);
+                }
+
+                recordNextChunk();
+
+            } catch (err) {
+                console.error("Audio recording export error:", err);
+                closeModal();
+                showModal("Export Error", "Unable to capture audio stream in this browser environment. Standard playback is fully operational.", true);
+            }
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const themeIcon = document.getElementById('themeIcon');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                themeIcon.className = 'fa-solid fa-moon text-indigo-600';
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                themeIcon.className = 'fa-solid fa-sun text-amber-400';
+            }
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (synth.speaking) synth.cancel();
+        });
+    </script>
+</body>
+</html>
